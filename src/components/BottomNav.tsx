@@ -2,12 +2,13 @@ import { Link, useLocation } from "@tanstack/react-router";
 import { Home, Plus, Sparkles, List } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const items = [
-  { to: "/", icon: Home, label: "Início" },
+type Item = { to: string; icon: typeof Home; label: string; primary?: boolean };
+const items: Item[] = [
+  { to: "/home", icon: Home, label: "Início" },
   { to: "/expenses", icon: List, label: "Despesas" },
   { to: "/add", icon: Plus, label: "Adicionar", primary: true },
   { to: "/insights", icon: Sparkles, label: "AI" },
-] as const;
+];
 
 export function BottomNav() {
   const { pathname } = useLocation();
@@ -20,7 +21,7 @@ export function BottomNav() {
             return (
               <Link
                 key={to}
-                to={to}
+                to={to as string}
                 className="-mt-6 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-elegant transition-transform active:scale-95"
                 aria-label={label}
               >
@@ -31,7 +32,7 @@ export function BottomNav() {
           return (
             <Link
               key={to}
-              to={to}
+              to={to as string}
               className={cn(
                 "flex flex-col items-center gap-1 px-3 py-2 text-[11px] font-medium transition-colors",
                 active ? "text-primary" : "text-muted-foreground hover:text-foreground",
