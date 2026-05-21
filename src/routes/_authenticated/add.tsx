@@ -31,6 +31,7 @@ function AddPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const analyze = useServerFn(analyzeReceipt);
+  const parseVoice = useServerFn(parseSupermarketVoice);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [category, setCategory] = useState<string>("Renda");
@@ -40,10 +41,20 @@ function AddPage() {
   const [saving, setSaving] = useState(false);
 
   // supermarket flow
+  const [superMode, setSuperMode] = useState<"photo" | "manual">("photo");
   const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [items, setItems] = useState<ReceiptItem[]>([]);
+
+  // manual supermarket subcategory totals
+  const [subTotals, setSubTotals] = useState<Record<string, string>>(
+    Object.fromEntries(SUPERMARKET_SUBCATEGORIES.map((s) => [s, ""])),
+  );
+  const [transcript, setTranscript] = useState("");
+  const [listening, setListening] = useState(false);
+  const [parsingVoice, setParsingVoice] = useState(false);
+  const recogRef = useRef<any>(null);
 
   const isSupermarket = category === "Supermercado";
 
