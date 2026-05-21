@@ -109,12 +109,72 @@ function AddPage() {
   }
 
   const itemsTotal = items.reduce((acc, it) => acc + (Number(it.price) || 0), 0);
+  const manualTotal = Object.values(subTotals).reduce((a, v) => a + (Number(v) || 0), 0);
+
+  function startListening() {
+    const SR: any =
+      (typeof window !== "undefined" && ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)) ||
+      null;
+    if (!SR) {
+      toast.error("O teu browser não suporta ditado por voz. Escreve manualmente.");
+      return;
+    }
+    const r = new SR();
+    r.lang = "pt-PT";
+    r.continuous = true;
+    r.interimResults = true;
+    let finalText = "";
+    r.onresult = (e: any) => {
+      let interim = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const res = e.results[i];
+        if (res.isFinal) finalText += res[0].transcript + " ";
+        else interim += res[0].transcript;
+      }
+      setTranscript((finalText + interim).trim());
+    };
+    r.onerror = () => setListening(false);
+    r.onend = () => setListening(false);
+    recogRef.current = r;
+    setListening(true);
+    r.start();
+  }
+  function stopListening() {
+    try { recogRef.current?.stop(); } catch {}
+    setListening(false);
+  }
+  async function runVoiceParse() {
+    const txt = transcript.trim();
+    if (!txt) {
+      toast.error("Grava ou escreve algo primeiro");
+      return;
+    }
+    setParsingVoice(true);
+    try {
+      const res = await parseVoice({ data: { transcript: txt } });
+      if (res.location) setLocation(res.location);
+      const subs = res.subcategories ?? {};
+      setSubTotals((prev) => {
+        const next = { ...prev };
+        for (const k of SUPERMARKET_SUBCATEGORIES) {
+          const v = Number(subs[k]);
+          if (v > 0) next[k] = String(v);
+        }
+        return next;
+      });
+      toast.success("Dados preenchidos pela AI");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "AI falhou");
+    } finally {
+      setParsingVoice(false);
+    }
+  }
 
   async function save() {
     if (!user) return;
     setSaving(true);
     try {
-      if (isSupermarket) {
+      if (isSupermarket && superMode === "photo") {
         const rows = items
           .filter((it) => it.name.trim() && Number(it.price) > 0)
           .map((it) => ({
