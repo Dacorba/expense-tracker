@@ -4,19 +4,9 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
-const CATEGORY_LIST = [
-  "Supermercado",
-  "Restaurante",
-  "Renda",
-  "Transporte",
-  "Saúde",
-  "Lazer",
-  "Vestuário",
-  "Serviços",
-  "Outro",
-];
+const SUBCATS = ["Comida", "Bebidas", "Higiene", "Limpeza", "Casa", "Outro"];
 
-export const analyzeItemPhoto = createServerFn({ method: "POST" })
+export const analyzeReceipt = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { imageUrl: string }) =>
     z.object({ imageUrl: z.string().url() }).parse(input),
@@ -25,26 +15,31 @@ export const analyzeItemPhoto = createServerFn({ method: "POST" })
     const key = process.env.LOVABLE_API_KEY;
     if (!key) throw new Error("LOVABLE_API_KEY not configured");
 
-    const sys = `És um assistente que identifica items de despesa a partir de uma foto.
-Responde APENAS com JSON válido neste formato exato:
+    const sys = `És um assistente que lê faturas de supermercado em português.
+Extrai TODOS os items comprados e responde APENAS com JSON válido neste formato exato:
 {
-  "item_name": "nome curto em português",
-  "category": "uma de: ${CATEGORY_LIST.join(", ")}",
-  "quantity": número (1 se desconhecido),
-  "unit": "kg" | "g" | "L" | "ml" | "un" | null,
-  "estimated_price_eur": número ou null,
-  "protein_g": proteína estimada por unidade em gramas ou null,
-  "calories": calorias estimadas por unidade em kcal ou null,
-  "notes": "nota curta opcional ou string vazia"
+  "store": "nome do supermercado ou string vazia",
+  "total": número (total da fatura) ou null,
+  "items": [
+    {
+      "name": "nome do produto",
+      "price": número em euros,
+      "subcategory": "uma de: ${SUBCATS.join(", ")}"
+    }
+  ]
 }
+Regras para subcategoria:
+- Comida: alimentos sólidos, frescos, mercearia, charcutaria, padaria, congelados
+- Bebidas: água, sumos, refrigerantes, álcool, café, chá
+- Higiene: higiene pessoal, cosméticos, fraldas
+- Limpeza: detergentes, produtos de limpeza da casa
+- Casa: utensílios, pilhas, lâmpadas, papel
+- Outro: tudo o resto
 Sem texto extra. Sem markdown.`;
 
     const res = await fetch(GATEWAY, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
@@ -52,7 +47,7 @@ Sem texto extra. Sem markdown.`;
           {
             role: "user",
             content: [
-              { type: "text", text: "Identifica o item nesta foto." },
+              { type: "text", text: "Extrai todos os items desta fatura." },
               { type: "image_url", image_url: { url: data.imageUrl } },
             ],
           },
@@ -68,9 +63,13 @@ Sem texto extra. Sem markdown.`;
     const content: string = json?.choices?.[0]?.message?.content ?? "{}";
     const cleaned = content.replace(/```json|```/g, "").trim();
     try {
-      return JSON.parse(cleaned);
+      return JSON.parse(cleaned) as {
+        store?: string;
+        total?: number | null;
+        items?: { name: string; price: number; subcategory: string }[];
+      };
     } catch {
-      return { item_name: "", category: "Outro", quantity: 1, unit: null };
+      return { store: "", total: null, items: [] };
     }
   });
 
@@ -83,7 +82,7 @@ export const generateInsights = createServerFn({ method: "POST" })
 
     const { data: expenses, error } = await supabase
       .from("expenses")
-      .select("item_name,category,price,quantity,unit,protein_g,calories,location,spent_at")
+      .select("item_name,category,subcategory,price,location,notes,spent_at")
       .gte("spent_at", since.toISOString())
       .order("spent_at", { ascending: false })
       .limit(500);
@@ -99,7 +98,7 @@ export const generateInsights = createServerFn({ method: "POST" })
     const summary = expenses
       .map(
         (e) =>
-          `${e.spent_at?.slice(0, 10)} | ${e.category} | ${e.item_name} | ${e.quantity}${e.unit ?? ""} | ${e.price}€ | prot:${e.protein_g ?? "?"}g | kcal:${e.calories ?? "?"} | ${e.location ?? ""}`,
+          `${e.spent_at?.slice(0, 10)} | ${e.category}${e.subcategory ? "/" + e.subcategory : ""} | ${e.item_name} | ${e.price}€ | ${e.location ?? ""}`,
       )
       .join("\n");
 
@@ -111,19 +110,16 @@ export const generateInsights = createServerFn({ method: "POST" })
         messages: [
           {
             role: "system",
-            content: `És um coach financeiro e nutricional pessoal. Em português de Portugal, analisa os dados e responde em markdown com secções curtas:
+            content: `És um coach financeiro pessoal. Em português de Portugal, analisa os dados e responde em markdown com secções curtas:
 ## Hábitos de consumo
-## Saúde alimentar e custo/proteína
+## Distribuição por categoria e subcategoria (supermercado)
 ## Inflação pessoal e padrões mensais
 ## Previsão para o próximo mês
 ## Otimização de compras (3 ações concretas)
 
 Sê específico, usa números dos dados, frases curtas. Sem boilerplate.`,
           },
-          {
-            role: "user",
-            content: `Despesas dos últimos 90 dias (uma por linha):\n${summary}`,
-          },
+          { role: "user", content: `Despesas dos últimos 90 dias (uma por linha):\n${summary}` },
         ],
       }),
     });
