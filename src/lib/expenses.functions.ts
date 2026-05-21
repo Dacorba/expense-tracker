@@ -6,6 +6,64 @@ const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 const SUBCATS = ["Comida", "Bebidas", "Higiene", "Limpeza", "Casa", "Outro"];
 
+export const parseSupermarketVoice = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { transcript: string }) =>
+    z.object({ transcript: z.string().min(1).max(2000) }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const key = process.env.LOVABLE_API_KEY;
+    if (!key) throw new Error("LOVABLE_API_KEY not configured");
+
+    const sys = `És um assistente que extrai informação de uma descrição falada/escrita de uma ida ao supermercado em português de Portugal.
+Responde APENAS com JSON válido neste formato exato:
+{
+  "location": "nome do supermercado ou string vazia",
+  "total": número (total gasto) ou null,
+  "subcategories": {
+    "Comida": número ou 0,
+    "Bebidas": número ou 0,
+    "Higiene": número ou 0,
+    "Limpeza": número ou 0,
+    "Casa": número ou 0,
+    "Outro": número ou 0
+  }
+}
+Regras:
+- Os valores das subcategorias são preços médios estimados pelo utilizador.
+- Se o utilizador mencionar items, mapeia mentalmente para uma subcategoria e soma.
+- Subcategorias não mencionadas ficam a 0.
+- Sem texto extra, sem markdown.`;
+
+    const res = await fetch(GATEWAY, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: sys },
+          { role: "user", content: data.transcript },
+        ],
+      }),
+    });
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(`AI gateway error ${res.status}: ${txt}`);
+    }
+    const json = await res.json();
+    const content: string = json?.choices?.[0]?.message?.content ?? "{}";
+    const cleaned = content.replace(/```json|```/g, "").trim();
+    try {
+      return JSON.parse(cleaned) as {
+        location?: string;
+        total?: number | null;
+        subcategories?: Record<string, number>;
+      };
+    } catch {
+      return { location: "", total: null, subcategories: {} };
+    }
+  });
+
 export const analyzeReceipt = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { imageUrl: string }) =>
