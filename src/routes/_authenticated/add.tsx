@@ -195,6 +195,32 @@ function AddPage() {
         const { error } = await supabase.from("expenses").insert(rows);
         if (error) throw error;
         toast.success(`${rows.length} items guardados`);
+      } else if (isSupermarket && superMode === "manual") {
+        if (!location.trim()) {
+          toast.error("Indica o supermercado");
+          setSaving(false);
+          return;
+        }
+        const rows = SUPERMARKET_SUBCATEGORIES
+          .map((s) => ({ s, v: Number(subTotals[s]) }))
+          .filter((x) => x.v > 0)
+          .map((x) => ({
+            user_id: user.id,
+            item_name: x.s,
+            category: "Supermercado",
+            subcategory: x.s,
+            price: x.v,
+            location: location.trim(),
+            notes: notes || null,
+          }));
+        if (rows.length === 0) {
+          toast.error("Indica pelo menos um valor por subcategoria");
+          setSaving(false);
+          return;
+        }
+        const { error } = await supabase.from("expenses").insert(rows);
+        if (error) throw error;
+        toast.success(`${rows.length} subcategorias guardadas`);
       } else {
         if (!price || Number(price) <= 0) {
           toast.error("Preço é obrigatório");
