@@ -301,7 +301,7 @@ function SupermarketFlow({
   removeItem,
   addEmptyItem,
 }: {
-  fileRef: React.RefObject<HTMLInputElement>;
+  fileRef: React.RefObject<HTMLInputElement | null>;
   receiptUrl: string | null;
   uploading: boolean;
   analyzing: boolean;
