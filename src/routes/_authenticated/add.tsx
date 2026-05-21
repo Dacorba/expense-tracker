@@ -287,6 +287,8 @@ function AddPage() {
 
       {isSupermarket ? (
         <SupermarketFlow
+          mode={superMode}
+          setMode={setSuperMode}
           fileRef={fileRef}
           receiptUrl={receiptUrl}
           uploading={uploading}
@@ -301,6 +303,16 @@ function AddPage() {
           updateItem={updateItem}
           removeItem={removeItem}
           addEmptyItem={addEmptyItem}
+          subTotals={subTotals}
+          setSubTotal={(k, v) => setSubTotals((p) => ({ ...p, [k]: v }))}
+          manualTotal={manualTotal}
+          transcript={transcript}
+          setTranscript={setTranscript}
+          listening={listening}
+          parsingVoice={parsingVoice}
+          startListening={startListening}
+          stopListening={stopListening}
+          runVoiceParse={runVoiceParse}
         />
       ) : (
         <SimpleFlow
@@ -315,14 +327,16 @@ function AddPage() {
 
       <Button
         onClick={save}
-        disabled={saving || uploading || analyzing}
+        disabled={saving || uploading || analyzing || parsingVoice}
         className="mt-6 w-full"
         size="lg"
       >
         {saving
           ? "A guardar..."
           : isSupermarket
-            ? `Guardar ${items.length} items · ${formatEUR(itemsTotal)}`
+            ? superMode === "photo"
+              ? `Guardar ${items.length} items · ${formatEUR(itemsTotal)}`
+              : `Guardar · ${formatEUR(manualTotal)}`
             : `Guardar ${categoryEmoji(category)}`}
       </Button>
     </main>
