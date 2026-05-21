@@ -21,6 +21,17 @@ export const CATEGORIES: { key: CategoryKey; emoji: string }[] = [
   { key: "Outro", emoji: "✨" },
 ];
 
+export const SUPERMARKET_SUBCATEGORIES = [
+  "Comida",
+  "Bebidas",
+  "Higiene",
+  "Limpeza",
+  "Casa",
+  "Outro",
+] as const;
+
+export type SupermarketSubcategory = (typeof SUPERMARKET_SUBCATEGORIES)[number];
+
 export function categoryEmoji(key: string): string {
   return CATEGORIES.find((c) => c.key === key)?.emoji ?? "✨";
 }

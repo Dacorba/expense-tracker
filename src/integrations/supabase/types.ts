@@ -28,6 +28,7 @@ export type Database = {
           protein_g: number | null
           quantity: number
           spent_at: string
+          subcategory: string | null
           unit: string | null
           user_id: string
         }
@@ -44,6 +45,7 @@ export type Database = {
           protein_g?: number | null
           quantity?: number
           spent_at?: string
+          subcategory?: string | null
           unit?: string | null
           user_id: string
         }
@@ -60,6 +62,7 @@ export type Database = {
           protein_g?: number | null
           quantity?: number
           spent_at?: string
+          subcategory?: string | null
           unit?: string | null
           user_id?: string
         }
