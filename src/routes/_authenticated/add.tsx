@@ -397,6 +397,8 @@ function SimpleFlow({
 }
 
 function SupermarketFlow({
+  mode,
+  setMode,
   fileRef,
   receiptUrl,
   uploading,
@@ -411,7 +413,19 @@ function SupermarketFlow({
   updateItem,
   removeItem,
   addEmptyItem,
+  subTotals,
+  setSubTotal,
+  manualTotal,
+  transcript,
+  setTranscript,
+  listening,
+  parsingVoice,
+  startListening,
+  stopListening,
+  runVoiceParse,
 }: {
+  mode: "photo" | "manual";
+  setMode: (m: "photo" | "manual") => void;
   fileRef: React.RefObject<HTMLInputElement | null>;
   receiptUrl: string | null;
   uploading: boolean;
@@ -426,112 +440,226 @@ function SupermarketFlow({
   updateItem: (i: number, patch: Partial<ReceiptItem>) => void;
   removeItem: (i: number) => void;
   addEmptyItem: () => void;
+  subTotals: Record<string, string>;
+  setSubTotal: (k: string, v: string) => void;
+  manualTotal: number;
+  transcript: string;
+  setTranscript: (v: string) => void;
+  listening: boolean;
+  parsingVoice: boolean;
+  startListening: () => void;
+  stopListening: () => void;
+  runVoiceParse: () => void;
 }) {
   return (
     <div className="mt-5 space-y-4">
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        hidden
-        onChange={(e) => e.target.files?.[0] && onPick(e.target.files[0])}
-      />
-
-      <button
-        type="button"
-        onClick={() => fileRef.current?.click()}
-        disabled={uploading || analyzing}
-        className="relative flex h-44 w-full items-center justify-center overflow-hidden rounded-3xl border-2 border-dashed border-border bg-card transition hover:border-primary"
-      >
-        {receiptUrl ? (
-          <img src={receiptUrl} alt="fatura" className="h-full w-full object-cover" />
-        ) : (
-          <div className="text-center">
-            <Camera className="mx-auto mb-2 h-8 w-8 text-primary" />
-            <p className="text-sm font-medium">Foto da fatura</p>
-            <p className="text-xs text-muted-foreground">A AI separa items por subcategoria</p>
-          </div>
-        )}
-        {(uploading || analyzing) && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            <p className="mt-2 text-xs font-medium">
-              {uploading ? "A enviar..." : "A AI a ler fatura..."}
-            </p>
-          </div>
-        )}
-      </button>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="loc">Supermercado</Label>
-        <Input
-          id="loc"
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          placeholder="Pingo Doce"
-        />
+      <div className="grid grid-cols-2 gap-2 rounded-xl border border-border bg-card p-1">
+        <button
+          type="button"
+          onClick={() => setMode("photo")}
+          className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-medium transition ${
+            mode === "photo" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+          }`}
+        >
+          <Camera className="h-4 w-4" /> Fatura
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("manual")}
+          className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-medium transition ${
+            mode === "manual" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+          }`}
+        >
+          <Pencil className="h-4 w-4" /> Manual / Voz
+        </button>
       </div>
 
-      {items.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label className="flex items-center gap-1">
-              <Sparkles className="h-3 w-3 text-primary" /> Items ({items.length})
-            </Label>
-            <span className="text-sm font-semibold">{formatEUR(itemsTotal)}</span>
-          </div>
-          <div className="space-y-2">
-            {items.map((it, i) => (
-              <div key={i} className="rounded-xl border border-border bg-card p-3">
-                <div className="flex gap-2">
-                  <Input
-                    value={it.name}
-                    onChange={(e) => updateItem(i, { name: e.target.value })}
-                    placeholder="Nome"
-                    className="flex-1"
-                  />
-                  <Input
-                    value={it.price}
-                    onChange={(e) => updateItem(i, { price: e.target.value })}
-                    inputMode="decimal"
-                    placeholder="0.00"
-                    className="w-20"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeItem(i)}
-                    className="rounded-md p-2 text-muted-foreground hover:bg-muted"
-                    aria-label="Remover"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {SUPERMARKET_SUBCATEGORIES.map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => updateItem(i, { subcategory: s })}
-                      className={`rounded-full border px-2.5 py-1 text-xs transition ${
-                        it.subcategory === s
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border bg-background hover:border-primary/40"
-                      }`}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {mode === "photo" ? (
+        <>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            hidden
+            onChange={(e) => e.target.files?.[0] && onPick(e.target.files[0])}
+          />
 
-      <Button type="button" variant="outline" onClick={addEmptyItem} className="w-full">
-        + Adicionar item manualmente
-      </Button>
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading || analyzing}
+            className="relative flex h-44 w-full items-center justify-center overflow-hidden rounded-3xl border-2 border-dashed border-border bg-card transition hover:border-primary"
+          >
+            {receiptUrl ? (
+              <img src={receiptUrl} alt="fatura" className="h-full w-full object-cover" />
+            ) : (
+              <div className="text-center">
+                <Camera className="mx-auto mb-2 h-8 w-8 text-primary" />
+                <p className="text-sm font-medium">Foto da fatura</p>
+                <p className="text-xs text-muted-foreground">A AI separa items por subcategoria</p>
+              </div>
+            )}
+            {(uploading || analyzing) && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <p className="mt-2 text-xs font-medium">
+                  {uploading ? "A enviar..." : "A AI a ler fatura..."}
+                </p>
+              </div>
+            )}
+          </button>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="loc">Supermercado</Label>
+            <Input
+              id="loc"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="Pingo Doce"
+            />
+          </div>
+
+          {items.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-1">
+                  <Sparkles className="h-3 w-3 text-primary" /> Items ({items.length})
+                </Label>
+                <span className="text-sm font-semibold">{formatEUR(itemsTotal)}</span>
+              </div>
+              <div className="space-y-2">
+                {items.map((it, i) => (
+                  <div key={i} className="rounded-xl border border-border bg-card p-3">
+                    <div className="flex gap-2">
+                      <Input
+                        value={it.name}
+                        onChange={(e) => updateItem(i, { name: e.target.value })}
+                        placeholder="Nome"
+                        className="flex-1"
+                      />
+                      <Input
+                        value={it.price}
+                        onChange={(e) => updateItem(i, { price: e.target.value })}
+                        inputMode="decimal"
+                        placeholder="0.00"
+                        className="w-20"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeItem(i)}
+                        className="rounded-md p-2 text-muted-foreground hover:bg-muted"
+                        aria-label="Remover"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {SUPERMARKET_SUBCATEGORIES.map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => updateItem(i, { subcategory: s })}
+                          className={`rounded-full border px-2.5 py-1 text-xs transition ${
+                            it.subcategory === s
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-border bg-background hover:border-primary/40"
+                          }`}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <Button type="button" variant="outline" onClick={addEmptyItem} className="w-full">
+            + Adicionar item manualmente
+          </Button>
+        </>
+      ) : (
+        <>
+          <div className="rounded-2xl border border-border bg-card p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <Label className="flex items-center gap-1.5">
+                <Mic className="h-4 w-4 text-primary" /> Ditar por voz
+              </Label>
+              {listening && (
+                <span className="flex items-center gap-1 text-xs text-primary">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-primary" /> a ouvir
+                </span>
+              )}
+            </div>
+            <p className="mb-3 text-xs text-muted-foreground">
+              Ex: "Fui ao Pingo Doce, gastei 65€ no total, cerca de 40€ em comida, 10€ em bebidas e 15€ em higiene."
+            </p>
+            <Textarea
+              value={transcript}
+              onChange={(e) => setTranscript(e.target.value)}
+              rows={3}
+              placeholder="Carrega no microfone ou escreve aqui..."
+            />
+            <div className="mt-2 flex gap-2">
+              {listening ? (
+                <Button type="button" variant="destructive" onClick={stopListening} className="flex-1">
+                  <Square className="mr-1 h-4 w-4" /> Parar
+                </Button>
+              ) : (
+                <Button type="button" variant="outline" onClick={startListening} className="flex-1">
+                  <Mic className="mr-1 h-4 w-4" /> Gravar
+                </Button>
+              )}
+              <Button
+                type="button"
+                onClick={runVoiceParse}
+                disabled={parsingVoice || !transcript.trim()}
+                className="flex-1"
+              >
+                {parsingVoice ? (
+                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-1 h-4 w-4" />
+                )}
+                Preencher com AI
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="loc">Supermercado</Label>
+            <Input
+              id="loc"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="Pingo Doce"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Valor estimado por subcategoria</Label>
+              <span className="text-sm font-semibold">{formatEUR(manualTotal)}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {SUPERMARKET_SUBCATEGORIES.map((s) => (
+                <div key={s} className="rounded-xl border border-border bg-card p-2.5">
+                  <div className="mb-1 text-xs font-medium text-muted-foreground">{s}</div>
+                  <Input
+                    value={subTotals[s] ?? ""}
+                    onChange={(e) => setSubTotal(s, e.target.value)}
+                    inputMode="decimal"
+                    placeholder="0.00 €"
+                    className="h-9"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="space-y-1.5">
         <Label htmlFor="notes">Notas (opcional)</Label>
