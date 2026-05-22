@@ -575,9 +575,12 @@ function SupermarketFlow({
             </div>
           )}
 
-          <Button type="button" variant="outline" onClick={addEmptyItem} className="w-full">
-            + Adicionar item manualmente
-          </Button>
+          {items.length > 0 && (
+            <Button type="button" variant="outline" onClick={addEmptyItem} className="w-full">
+              + Adicionar item em falta
+            </Button>
+          )}
+
         </>
       ) : (
         <>
