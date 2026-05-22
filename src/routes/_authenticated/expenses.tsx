@@ -83,10 +83,10 @@ function ExpensesPage() {
   }
 
   function setPeriod(p: Period) {
-    navigate({ search: (prev) => ({ ...prev, period: p }) });
+    navigate({ search: (prev: Search) => ({ ...prev, period: p }) });
   }
   function setCategory(c: string | undefined) {
-    navigate({ search: (prev) => ({ ...prev, category: c }) });
+    navigate({ search: (prev: Search) => ({ ...prev, category: c }) });
   }
 
   return (
