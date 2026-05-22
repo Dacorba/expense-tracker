@@ -516,15 +516,8 @@ function SupermarketFlow({
             )}
           </button>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="loc">Supermercado</Label>
-            <Input
-              id="loc"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="Pingo Doce"
-            />
-          </div>
+
+
 
           {items.length > 0 && (
             <div className="space-y-2">
