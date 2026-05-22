@@ -78,7 +78,12 @@ function HomePage() {
         ) : (
           <div className="space-y-2">
             {topCats.map(([cat, total]) => (
-              <div key={cat} className="rounded-2xl border border-border bg-card p-4">
+              <Link
+                key={cat}
+                to="/expenses/$category"
+                params={{ category: cat }}
+                className="block rounded-2xl border border-border bg-card p-4 transition-colors hover:border-primary/40"
+              >
                 <div className="mb-2 flex items-center justify-between text-sm">
                   <span className="font-medium">{categoryEmoji(cat)} {cat}</span>
                   <span className="tabular-nums text-foreground">{formatEUR(total)}</span>
@@ -86,7 +91,7 @@ function HomePage() {
                 <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                   <div className="h-full rounded-full bg-gold" style={{ width: `${(total / maxCat) * 100}%` }} />
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}

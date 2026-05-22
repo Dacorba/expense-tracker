@@ -1,37 +1,40 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { categoryEmoji, formatEUR } from "@/lib/categories";
-import { Trash2 } from "lucide-react";
+import { ChevronLeft, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/expenses")({
-  component: ExpensesPage,
+export const Route = createFileRoute("/_authenticated/expenses/$category")({
+  component: CategoryPage,
 });
 
-function ExpensesPage() {
+function CategoryPage() {
+  const { category } = Route.useParams();
   const { user } = useAuth();
   const { data: expenses = [], refetch } = useQuery({
-    queryKey: ["expenses-all", user?.id],
+    queryKey: ["expenses-cat", user?.id, category],
     enabled: !!user,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("expenses")
         .select("*")
+        .eq("category", category)
         .order("spent_at", { ascending: false })
-        .limit(200);
+        .limit(500);
       if (error) throw error;
       return data ?? [];
     },
   });
 
-  // group by day
+  // group by month (YYYY-MM)
   const groups = new Map<string, typeof expenses>();
   expenses.forEach((e) => {
-    const day = new Date(e.spent_at).toLocaleDateString("pt-PT", { weekday: "short", day: "2-digit", month: "short" });
-    if (!groups.has(day)) groups.set(day, []);
-    groups.get(day)!.push(e);
+    const d = new Date(e.spent_at);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(e);
   });
 
   async function remove(id: string) {
@@ -42,18 +45,26 @@ function ExpensesPage() {
 
   return (
     <main className="px-5 pt-8">
-      <h1 className="mb-6 font-display text-2xl font-semibold">Despesas</h1>
+      <Link to="/home" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+        <ChevronLeft className="h-4 w-4" /> Voltar
+      </Link>
+      <h1 className="mb-6 font-display text-2xl font-semibold">
+        {categoryEmoji(category)} {category}
+      </h1>
+
       {expenses.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-          Ainda sem despesas. Toca em <span className="font-medium text-primary">+</span> para adicionar.
+          Sem despesas nesta categoria.
         </p>
       ) : (
-        [...groups.entries()].map(([day, items]) => {
+        [...groups.entries()].map(([key, items]) => {
           const total = items.reduce((s, e) => s + Number(e.price), 0);
+          const [y, m] = key.split("-");
+          const label = new Date(Number(y), Number(m) - 1, 1).toLocaleDateString("pt-PT", { month: "long", year: "numeric" });
           return (
-            <section key={day} className="mb-5">
+            <section key={key} className="mb-5">
               <div className="mb-2 flex items-center justify-between text-xs uppercase tracking-wider text-muted-foreground">
-                <span>{day}</span>
+                <span>{label}</span>
                 <span className="tabular-nums">{formatEUR(total)}</span>
               </div>
               <div className="space-y-2">
@@ -70,7 +81,9 @@ function ExpensesPage() {
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{e.item_name}</p>
                         <p className="truncate text-xs text-muted-foreground">
-                          {e.category}{e.location ? ` · ${e.location}` : ""}{e.quantity > 1 ? ` · ${e.quantity}${e.unit ?? ""}` : ""}
+                          {new Date(e.spent_at).toLocaleDateString("pt-PT", { day: "2-digit", month: "short" })}
+                          {e.subcategory ? ` · ${e.subcategory}` : ""}
+                          {e.location ? ` · ${e.location}` : ""}
                         </p>
                       </div>
                       <span className="text-sm font-semibold tabular-nums">{formatEUR(Number(e.price))}</span>
