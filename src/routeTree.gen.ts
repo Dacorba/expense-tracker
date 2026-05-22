@@ -16,7 +16,6 @@ import { Route as AuthenticatedInsightsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
 import { Route as AuthenticatedExpensesRouteImport } from './routes/_authenticated/expenses'
 import { Route as AuthenticatedAddRouteImport } from './routes/_authenticated/add'
-import { Route as AuthenticatedExpensesCategoryRouteImport } from './routes/_authenticated/expenses.$category'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -52,30 +51,22 @@ const AuthenticatedAddRoute = AuthenticatedAddRouteImport.update({
   path: '/add',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedExpensesCategoryRoute =
-  AuthenticatedExpensesCategoryRouteImport.update({
-    id: '/$category',
-    path: '/$category',
-    getParentRoute: () => AuthenticatedExpensesRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/add': typeof AuthenticatedAddRoute
-  '/expenses': typeof AuthenticatedExpensesRouteWithChildren
+  '/expenses': typeof AuthenticatedExpensesRoute
   '/home': typeof AuthenticatedHomeRoute
   '/insights': typeof AuthenticatedInsightsRoute
-  '/expenses/$category': typeof AuthenticatedExpensesCategoryRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/add': typeof AuthenticatedAddRoute
-  '/expenses': typeof AuthenticatedExpensesRouteWithChildren
+  '/expenses': typeof AuthenticatedExpensesRoute
   '/home': typeof AuthenticatedHomeRoute
   '/insights': typeof AuthenticatedInsightsRoute
-  '/expenses/$category': typeof AuthenticatedExpensesCategoryRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -83,30 +74,15 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/add': typeof AuthenticatedAddRoute
-  '/_authenticated/expenses': typeof AuthenticatedExpensesRouteWithChildren
+  '/_authenticated/expenses': typeof AuthenticatedExpensesRoute
   '/_authenticated/home': typeof AuthenticatedHomeRoute
   '/_authenticated/insights': typeof AuthenticatedInsightsRoute
-  '/_authenticated/expenses/$category': typeof AuthenticatedExpensesCategoryRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/auth'
-    | '/add'
-    | '/expenses'
-    | '/home'
-    | '/insights'
-    | '/expenses/$category'
+  fullPaths: '/' | '/auth' | '/add' | '/expenses' | '/home' | '/insights'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/auth'
-    | '/add'
-    | '/expenses'
-    | '/home'
-    | '/insights'
-    | '/expenses/$category'
+  to: '/' | '/auth' | '/add' | '/expenses' | '/home' | '/insights'
   id:
     | '__root__'
     | '/'
@@ -116,7 +92,6 @@ export interface FileRouteTypes {
     | '/_authenticated/expenses'
     | '/_authenticated/home'
     | '/_authenticated/insights'
-    | '/_authenticated/expenses/$category'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -176,39 +151,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAddRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/expenses/$category': {
-      id: '/_authenticated/expenses/$category'
-      path: '/$category'
-      fullPath: '/expenses/$category'
-      preLoaderRoute: typeof AuthenticatedExpensesCategoryRouteImport
-      parentRoute: typeof AuthenticatedExpensesRoute
-    }
   }
 }
 
-interface AuthenticatedExpensesRouteChildren {
-  AuthenticatedExpensesCategoryRoute: typeof AuthenticatedExpensesCategoryRoute
-}
-
-const AuthenticatedExpensesRouteChildren: AuthenticatedExpensesRouteChildren = {
-  AuthenticatedExpensesCategoryRoute: AuthenticatedExpensesCategoryRoute,
-}
-
-const AuthenticatedExpensesRouteWithChildren =
-  AuthenticatedExpensesRoute._addFileChildren(
-    AuthenticatedExpensesRouteChildren,
-  )
-
 interface AuthenticatedRouteChildren {
   AuthenticatedAddRoute: typeof AuthenticatedAddRoute
-  AuthenticatedExpensesRoute: typeof AuthenticatedExpensesRouteWithChildren
+  AuthenticatedExpensesRoute: typeof AuthenticatedExpensesRoute
   AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
   AuthenticatedInsightsRoute: typeof AuthenticatedInsightsRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAddRoute: AuthenticatedAddRoute,
-  AuthenticatedExpensesRoute: AuthenticatedExpensesRouteWithChildren,
+  AuthenticatedExpensesRoute: AuthenticatedExpensesRoute,
   AuthenticatedHomeRoute: AuthenticatedHomeRoute,
   AuthenticatedInsightsRoute: AuthenticatedInsightsRoute,
 }
@@ -225,3 +180,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
