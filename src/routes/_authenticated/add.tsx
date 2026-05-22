@@ -134,21 +134,27 @@ function AddPage() {
       setTranscript((finalText + interim).trim());
     };
     r.onerror = () => setListening(false);
-    r.onend = () => setListening(false);
+    r.onend = () => {
+      setListening(false);
+      const txt = finalText.trim();
+      if (txt) runVoiceParse(txt);
+    };
     recogRef.current = r;
     setListening(true);
+    setTranscript("");
     r.start();
   }
   function stopListening() {
     try { recogRef.current?.stop(); } catch {}
     setListening(false);
   }
-  async function runVoiceParse() {
-    const txt = transcript.trim();
+  async function runVoiceParse(textOverride?: string) {
+    const txt = (textOverride ?? transcript).trim();
     if (!txt) {
-      toast.error("Grava ou escreve algo primeiro");
+      toast.error("Grava algo primeiro");
       return;
     }
+
     setParsingVoice(true);
     try {
       const res = await parseVoice({ data: { transcript: txt } });
@@ -510,15 +516,8 @@ function SupermarketFlow({
             )}
           </button>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="loc">Supermercado</Label>
-            <Input
-              id="loc"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="Pingo Doce"
-            />
-          </div>
+
+
 
           {items.length > 0 && (
             <div className="space-y-2">
@@ -576,58 +575,15 @@ function SupermarketFlow({
             </div>
           )}
 
-          <Button type="button" variant="outline" onClick={addEmptyItem} className="w-full">
-            + Adicionar item manualmente
-          </Button>
+          {items.length > 0 && (
+            <Button type="button" variant="outline" onClick={addEmptyItem} className="w-full">
+              + Adicionar item em falta
+            </Button>
+          )}
+
         </>
       ) : (
         <>
-          <div className="rounded-2xl border border-border bg-card p-4">
-            <div className="mb-2 flex items-center justify-between">
-              <Label className="flex items-center gap-1.5">
-                <Mic className="h-4 w-4 text-primary" /> Ditar por voz
-              </Label>
-              {listening && (
-                <span className="flex items-center gap-1 text-xs text-primary">
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-primary" /> a ouvir
-                </span>
-              )}
-            </div>
-            <p className="mb-3 text-xs text-muted-foreground">
-              Ex: "Fui ao Pingo Doce, gastei 65€ no total, cerca de 40€ em comida, 10€ em bebidas e 15€ em higiene."
-            </p>
-            <Textarea
-              value={transcript}
-              onChange={(e) => setTranscript(e.target.value)}
-              rows={3}
-              placeholder="Carrega no microfone ou escreve aqui..."
-            />
-            <div className="mt-2 flex gap-2">
-              {listening ? (
-                <Button type="button" variant="destructive" onClick={stopListening} className="flex-1">
-                  <Square className="mr-1 h-4 w-4" /> Parar
-                </Button>
-              ) : (
-                <Button type="button" variant="outline" onClick={startListening} className="flex-1">
-                  <Mic className="mr-1 h-4 w-4" /> Gravar
-                </Button>
-              )}
-              <Button
-                type="button"
-                onClick={runVoiceParse}
-                disabled={parsingVoice || !transcript.trim()}
-                className="flex-1"
-              >
-                {parsingVoice ? (
-                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                ) : (
-                  <Sparkles className="mr-1 h-4 w-4" />
-                )}
-                Preencher com AI
-              </Button>
-            </div>
-          </div>
-
           <div className="space-y-1.5">
             <Label htmlFor="loc">Supermercado</Label>
             <Input
@@ -658,8 +614,44 @@ function SupermarketFlow({
               ))}
             </div>
           </div>
+
+          <div className="rounded-2xl border border-dashed border-border bg-card p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <Label className="flex items-center gap-1.5">
+                <Mic className="h-4 w-4 text-primary" /> Preencher por voz
+              </Label>
+              {listening && (
+                <span className="flex items-center gap-1 text-xs text-primary">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-primary" /> a ouvir
+                </span>
+              )}
+              {parsingVoice && (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" /> a interpretar
+                </span>
+              )}
+            </div>
+            <p className="mb-3 text-xs text-muted-foreground">
+              Ex: "Fui ao Pingo Doce, gastei 40€ em comida, 10€ em bebidas e 15€ em higiene."
+            </p>
+            {transcript && (
+              <p className="mb-3 rounded-lg bg-muted px-3 py-2 text-xs italic text-muted-foreground">
+                "{transcript}"
+              </p>
+            )}
+            {listening ? (
+              <Button type="button" variant="destructive" onClick={stopListening} className="w-full">
+                <Square className="mr-1 h-4 w-4" /> Parar e preencher
+              </Button>
+            ) : (
+              <Button type="button" variant="outline" onClick={startListening} disabled={parsingVoice} className="w-full">
+                <Mic className="mr-1 h-4 w-4" /> Gravar
+              </Button>
+            )}
+          </div>
         </>
       )}
+
 
       <div className="space-y-1.5">
         <Label htmlFor="notes">Notas (opcional)</Label>
