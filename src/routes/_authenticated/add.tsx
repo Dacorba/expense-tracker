@@ -134,21 +134,27 @@ function AddPage() {
       setTranscript((finalText + interim).trim());
     };
     r.onerror = () => setListening(false);
-    r.onend = () => setListening(false);
+    r.onend = () => {
+      setListening(false);
+      const txt = finalText.trim();
+      if (txt) runVoiceParse(txt);
+    };
     recogRef.current = r;
     setListening(true);
+    setTranscript("");
     r.start();
   }
   function stopListening() {
     try { recogRef.current?.stop(); } catch {}
     setListening(false);
   }
-  async function runVoiceParse() {
-    const txt = transcript.trim();
+  async function runVoiceParse(textOverride?: string) {
+    const txt = (textOverride ?? transcript).trim();
     if (!txt) {
-      toast.error("Grava ou escreve algo primeiro");
+      toast.error("Grava algo primeiro");
       return;
     }
+
     setParsingVoice(true);
     try {
       const res = await parseVoice({ data: { transcript: txt } });
