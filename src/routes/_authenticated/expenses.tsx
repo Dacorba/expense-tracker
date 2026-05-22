@@ -58,24 +58,31 @@ function ExpensesPage() {
               </div>
               <div className="space-y-2">
                 {items.map((e) => (
-                  <div key={e.id} className="group flex items-center gap-3 rounded-2xl border border-border bg-card p-3">
-                    {e.photo_url ? (
-                      <img src={e.photo_url} alt="" className="h-12 w-12 rounded-xl object-cover" />
-                    ) : (
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-xl">
-                        {categoryEmoji(e.category)}
+                  <div key={e.id} className="group rounded-2xl border border-border bg-card p-3">
+                    <div className="flex items-center gap-3">
+                      {e.photo_url ? (
+                        <img src={e.photo_url} alt="" className="h-12 w-12 rounded-xl object-cover" />
+                      ) : (
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-xl">
+                          {categoryEmoji(e.category)}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{e.item_name}</p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {e.category}{e.location ? ` · ${e.location}` : ""}{e.quantity > 1 ? ` · ${e.quantity}${e.unit ?? ""}` : ""}
+                        </p>
                       </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{e.item_name}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {e.category}{e.location ? ` · ${e.location}` : ""}{e.quantity > 1 ? ` · ${e.quantity}${e.unit ?? ""}` : ""}
-                      </p>
+                      <span className="text-sm font-semibold tabular-nums">{formatEUR(Number(e.price))}</span>
+                      <button onClick={() => remove(e.id)} className="rounded-full p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" aria-label="Apagar">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
-                    <span className="text-sm font-semibold tabular-nums">{formatEUR(Number(e.price))}</span>
-                    <button onClick={() => remove(e.id)} className="rounded-full p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" aria-label="Apagar">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {e.notes ? (
+                      <p className="mt-2 rounded-xl bg-muted/50 px-3 py-2 text-xs text-muted-foreground whitespace-pre-wrap">
+                        {e.notes}
+                      </p>
+                    ) : null}
                   </div>
                 ))}
               </div>
