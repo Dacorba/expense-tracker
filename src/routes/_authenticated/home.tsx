@@ -80,8 +80,8 @@ function HomePage() {
             {topCats.map(([cat, total]) => (
               <Link
                 key={cat}
-                to="/expenses/$category"
-                params={{ category: cat }}
+                to="/expenses"
+                search={{ category: cat, period: "month" }}
                 className="block rounded-2xl border border-border bg-card p-4 transition-colors hover:border-primary/40"
               >
                 <div className="mb-2 flex items-center justify-between text-sm">
