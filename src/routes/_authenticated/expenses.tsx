@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { CATEGORIES, categoryEmoji, formatEUR } from "@/lib/categories";
-import { Trash2, X } from "lucide-react";
+import { Trash2, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +12,7 @@ type Period = "day" | "week" | "month" | "year" | "all";
 type Search = {
   category?: string;
   period?: Period;
+  offset?: number;
 };
 
 export const Route = createFileRoute("/_authenticated/expenses")({
@@ -20,22 +21,39 @@ export const Route = createFileRoute("/_authenticated/expenses")({
     period: (["day", "week", "month", "year", "all"] as const).includes(s.period as Period)
       ? (s.period as Period)
       : "month",
+    offset: typeof s.offset === "number" ? s.offset : 0,
   }),
   component: ExpensesPage,
 });
 
-function startOfPeriod(p: Period): Date | null {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  if (p === "day") return d;
-  if (p === "week") {
-    const day = d.getDay() || 7; // monday start
-    d.setDate(d.getDate() - (day - 1));
-    return d;
+// Returns [start, end) for the given period and offset (0 = current, -1 = previous, +1 = next)
+function periodRange(p: Period, offset: number): { start: Date | null; end: Date | null; label: string } {
+  const now = new Date();
+  if (p === "all") return { start: null, end: null, label: "Tudo" };
+  if (p === "day") {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
+    const end = new Date(d); end.setDate(end.getDate() + 1);
+    const label = offset === 0 ? "Hoje" : offset === -1 ? "Ontem" : d.toLocaleDateString("pt-PT", { day: "2-digit", month: "short" });
+    return { start: d, end, label };
   }
-  if (p === "month") return new Date(d.getFullYear(), d.getMonth(), 1);
-  if (p === "year") return new Date(d.getFullYear(), 0, 1);
-  return null;
+  if (p === "week") {
+    const day = now.getDay() || 7;
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (day - 1) + offset * 7);
+    const end = new Date(monday); end.setDate(end.getDate() + 7);
+    const endDisplay = new Date(end); endDisplay.setDate(endDisplay.getDate() - 1);
+    const label = `${monday.toLocaleDateString("pt-PT", { day: "2-digit", month: "short" })} – ${endDisplay.toLocaleDateString("pt-PT", { day: "2-digit", month: "short" })}`;
+    return { start: monday, end, label };
+  }
+  if (p === "month") {
+    const start = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + offset + 1, 1);
+    const label = start.toLocaleDateString("pt-PT", { month: "long", year: "numeric" });
+    return { start, end, label };
+  }
+  // year
+  const start = new Date(now.getFullYear() + offset, 0, 1);
+  const end = new Date(now.getFullYear() + offset + 1, 0, 1);
+  return { start, end, label: String(start.getFullYear()) };
 }
 
 const PERIOD_LABEL: Record<Period, string> = {
@@ -48,18 +66,19 @@ const PERIOD_LABEL: Record<Period, string> = {
 
 function ExpensesPage() {
   const { user } = useAuth();
-  const { category, period = "month" } = Route.useSearch();
+  const { category, period = "month", offset = 0 } = Route.useSearch();
   const navigate = useNavigate({ from: "/expenses" });
 
-  const since = startOfPeriod(period);
+  const { start, end, label: rangeLabel } = periodRange(period, offset);
 
   const { data: expenses = [], refetch } = useQuery({
-    queryKey: ["expenses-all", user?.id, category, period],
+    queryKey: ["expenses-all", user?.id, category, period, offset],
     enabled: !!user,
     queryFn: async () => {
       let q = supabase.from("expenses").select("*").order("spent_at", { ascending: false }).limit(500);
       if (category) q = q.eq("category", category);
-      if (since) q = q.gte("spent_at", since.toISOString());
+      if (start) q = q.gte("spent_at", start.toISOString());
+      if (end) q = q.lt("spent_at", end.toISOString());
       const { data, error } = await q;
       if (error) throw error;
       return data ?? [];
@@ -83,11 +102,15 @@ function ExpensesPage() {
   }
 
   function setPeriod(p: Period) {
-    navigate({ search: (prev: Search) => ({ ...prev, period: p }) });
+    navigate({ search: (prev: Search) => ({ ...prev, period: p, offset: 0 }) });
   }
   function setCategory(c: string | undefined) {
     navigate({ search: (prev: Search) => ({ ...prev, category: c }) });
   }
+  function shiftOffset(delta: number) {
+    navigate({ search: (prev: Search) => ({ ...prev, offset: (prev.offset ?? 0) + delta }) });
+  }
+  const canShift = period !== "all";
 
   return (
     <main className="px-5 pt-8">
@@ -111,6 +134,28 @@ function ExpensesPage() {
           </button>
         ))}
       </div>
+
+      {/* Range navigation */}
+      {canShift && (
+        <div className="mb-4 flex items-center justify-between rounded-full border border-border bg-card px-1 py-1">
+          <button
+            onClick={() => shiftOffset(-1)}
+            className="rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+            aria-label="Anterior"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <span className="text-xs font-medium capitalize">{rangeLabel}</span>
+          <button
+            onClick={() => shiftOffset(1)}
+            disabled={offset >= 0}
+            className="rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:hover:bg-transparent"
+            aria-label="Seguinte"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* Category filter */}
       <div className="mb-5 flex gap-1 overflow-x-auto">
