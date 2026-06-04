@@ -44,7 +44,9 @@ function HomePage() {
     byCategory.set(e.category, (byCategory.get(e.category) ?? 0) + Number(e.price));
   });
   const topCats = [...byCategory.entries()].sort((a,b) => b[1]-a[1]).slice(0, 4);
-  const maxCat = topCats[0]?.[1] ?? 1;
+  const catTotal = topCats.reduce((s, [, v]) => s + v, 0) || 1;
+  const pieData = topCats.map(([name, value], i) => ({ name, value, fill: PIE_COLORS[i % PIE_COLORS.length] }));
+  const [view, setView] = useState<"list" | "pie">("list");
 
   return (
     <main className="px-5 pt-8">
