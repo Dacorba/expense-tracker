@@ -12,6 +12,7 @@ type Period = "day" | "week" | "month" | "year" | "all";
 type Search = {
   category?: string;
   period?: Period;
+  offset?: number;
 };
 
 export const Route = createFileRoute("/_authenticated/expenses")({
@@ -20,22 +21,39 @@ export const Route = createFileRoute("/_authenticated/expenses")({
     period: (["day", "week", "month", "year", "all"] as const).includes(s.period as Period)
       ? (s.period as Period)
       : "month",
+    offset: typeof s.offset === "number" ? s.offset : 0,
   }),
   component: ExpensesPage,
 });
 
-function startOfPeriod(p: Period): Date | null {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  if (p === "day") return d;
-  if (p === "week") {
-    const day = d.getDay() || 7; // monday start
-    d.setDate(d.getDate() - (day - 1));
-    return d;
+// Returns [start, end) for the given period and offset (0 = current, -1 = previous, +1 = next)
+function periodRange(p: Period, offset: number): { start: Date | null; end: Date | null; label: string } {
+  const now = new Date();
+  if (p === "all") return { start: null, end: null, label: "Tudo" };
+  if (p === "day") {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
+    const end = new Date(d); end.setDate(end.getDate() + 1);
+    const label = offset === 0 ? "Hoje" : offset === -1 ? "Ontem" : d.toLocaleDateString("pt-PT", { day: "2-digit", month: "short" });
+    return { start: d, end, label };
   }
-  if (p === "month") return new Date(d.getFullYear(), d.getMonth(), 1);
-  if (p === "year") return new Date(d.getFullYear(), 0, 1);
-  return null;
+  if (p === "week") {
+    const day = now.getDay() || 7;
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (day - 1) + offset * 7);
+    const end = new Date(monday); end.setDate(end.getDate() + 7);
+    const endDisplay = new Date(end); endDisplay.setDate(endDisplay.getDate() - 1);
+    const label = `${monday.toLocaleDateString("pt-PT", { day: "2-digit", month: "short" })} – ${endDisplay.toLocaleDateString("pt-PT", { day: "2-digit", month: "short" })}`;
+    return { start: monday, end, label };
+  }
+  if (p === "month") {
+    const start = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + offset + 1, 1);
+    const label = start.toLocaleDateString("pt-PT", { month: "long", year: "numeric" });
+    return { start, end, label };
+  }
+  // year
+  const start = new Date(now.getFullYear() + offset, 0, 1);
+  const end = new Date(now.getFullYear() + offset + 1, 0, 1);
+  return { start, end, label: String(start.getFullYear()) };
 }
 
 const PERIOD_LABEL: Record<Period, string> = {
