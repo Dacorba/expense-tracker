@@ -190,12 +190,7 @@ function HomePage() {
         </div>
       </section>
 
-      <section className="mt-8 mb-4 space-y-2">
-        <Link to="/add" className="block">
-          <Button variant="default" size="lg" className="w-full gap-2 h-14 text-base shadow-elegant">
-            <Plus className="h-5 w-5" /> Adicionar despesa
-          </Button>
-        </Link>
+      <section className="mt-6 mb-4">
         <Link to="/insights" className="block">
           <Button variant="ghost" className="w-full gap-2 text-muted-foreground">
             <Sparkles className="h-4 w-4" /> Insights AI
