@@ -66,18 +66,19 @@ const PERIOD_LABEL: Record<Period, string> = {
 
 function ExpensesPage() {
   const { user } = useAuth();
-  const { category, period = "month" } = Route.useSearch();
+  const { category, period = "month", offset = 0 } = Route.useSearch();
   const navigate = useNavigate({ from: "/expenses" });
 
-  const since = startOfPeriod(period);
+  const { start, end, label: rangeLabel } = periodRange(period, offset);
 
   const { data: expenses = [], refetch } = useQuery({
-    queryKey: ["expenses-all", user?.id, category, period],
+    queryKey: ["expenses-all", user?.id, category, period, offset],
     enabled: !!user,
     queryFn: async () => {
       let q = supabase.from("expenses").select("*").order("spent_at", { ascending: false }).limit(500);
       if (category) q = q.eq("category", category);
-      if (since) q = q.gte("spent_at", since.toISOString());
+      if (start) q = q.gte("spent_at", start.toISOString());
+      if (end) q = q.lt("spent_at", end.toISOString());
       const { data, error } = await q;
       if (error) throw error;
       return data ?? [];
@@ -101,11 +102,15 @@ function ExpensesPage() {
   }
 
   function setPeriod(p: Period) {
-    navigate({ search: (prev: Search) => ({ ...prev, period: p }) });
+    navigate({ search: (prev: Search) => ({ ...prev, period: p, offset: 0 }) });
   }
   function setCategory(c: string | undefined) {
     navigate({ search: (prev: Search) => ({ ...prev, category: c }) });
   }
+  function shiftOffset(delta: number) {
+    navigate({ search: (prev: Search) => ({ ...prev, offset: (prev.offset ?? 0) + delta }) });
+  }
+  const canShift = period !== "all";
 
   return (
     <main className="px-5 pt-8">
