@@ -184,12 +184,16 @@ function HomePage() {
         </div>
       </section>
 
-      <section className="mt-8 mb-4 grid grid-cols-2 gap-3">
-        <Link to="/add">
-          <Button variant="default" className="w-full gap-2"><Plus className="h-4 w-4" /> Adicionar</Button>
+      <section className="mt-8 mb-4 space-y-2">
+        <Link to="/add" className="block">
+          <Button variant="default" size="lg" className="w-full gap-2 h-14 text-base shadow-elegant">
+            <Plus className="h-5 w-5" /> Adicionar despesa
+          </Button>
         </Link>
-        <Link to="/insights">
-          <Button variant="outline" className="w-full gap-2"><Sparkles className="h-4 w-4" /> Insights AI</Button>
+        <Link to="/insights" className="block">
+          <Button variant="ghost" className="w-full gap-2 text-muted-foreground">
+            <Sparkles className="h-4 w-4" /> Insights AI
+          </Button>
         </Link>
       </section>
     </main>
