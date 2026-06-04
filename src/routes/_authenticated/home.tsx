@@ -74,31 +74,87 @@ function HomePage() {
       </section>
 
       <section className="mt-6">
-        <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Por categoria · este mês
-        </h2>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            Por categoria · este mês
+          </h2>
+          {topCats.length > 0 && (
+            <button
+              onClick={() => setView(view === "list" ? "pie" : "list")}
+              className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label="Alternar visualização"
+            >
+              {view === "list" ? <PieIcon className="h-3.5 w-3.5" /> : <List className="h-3.5 w-3.5" />}
+              {view === "list" ? "Pie" : "Lista"}
+            </button>
+          )}
+        </div>
         {topCats.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
             Sem despesas este mês.
           </p>
-        ) : (
+        ) : view === "list" ? (
           <div className="space-y-2">
-            {topCats.map(([cat, total]) => (
-              <Link
-                key={cat}
-                to="/expenses"
-                search={{ category: cat, period: "month" }}
-                className="block rounded-2xl border border-border bg-card p-4 transition-colors hover:border-primary/40"
-              >
-                <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="font-medium">{categoryEmoji(cat)} {cat}</span>
-                  <span className="tabular-nums text-foreground">{formatEUR(total)}</span>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                  <div className="h-full rounded-full bg-gold" style={{ width: `${(total / maxCat) * 100}%` }} />
-                </div>
-              </Link>
-            ))}
+            {topCats.map(([cat, total], i) => {
+              const pct = (total / catTotal) * 100;
+              return (
+                <Link
+                  key={cat}
+                  to="/expenses"
+                  search={{ category: cat, period: "month" }}
+                  className="block rounded-2xl border border-border bg-card p-4 transition-colors hover:border-primary/40"
+                >
+                  <div className="mb-2 flex items-center justify-between text-sm">
+                    <span className="font-medium">{categoryEmoji(cat)} {cat}</span>
+                    <span className="flex items-center gap-2 tabular-nums text-foreground">
+                      <span className="text-xs text-muted-foreground">{pct.toFixed(0)}%</span>
+                      {formatEUR(total)}
+                    </span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-border bg-card p-4">
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={45}
+                    outerRadius={80}
+                    paddingAngle={2}
+                    label={({ percent }) => `${((percent ?? 0) * 100).toFixed(0)}%`}
+                    labelLine={false}
+                  >
+                    {pieData.map((d) => <Cell key={d.name} fill={d.fill} />)}
+                  </Pie>
+                  <Tooltip formatter={(v: number) => formatEUR(v)} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+              {pieData.map((d) => (
+                <Link
+                  key={d.name}
+                  to="/expenses"
+                  search={{ category: d.name, period: "month" }}
+                  className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-muted"
+                >
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: d.fill }} />
+                  <span className="flex-1 truncate">{categoryEmoji(d.name)} {d.name}</span>
+                  <span className="tabular-nums text-muted-foreground">{((d.value / catTotal) * 100).toFixed(0)}%</span>
+                </Link>
+              ))}
+            </div>
           </div>
         )}
       </section>
