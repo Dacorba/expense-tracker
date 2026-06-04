@@ -135,6 +135,28 @@ function ExpensesPage() {
         ))}
       </div>
 
+      {/* Range navigation */}
+      {canShift && (
+        <div className="mb-4 flex items-center justify-between rounded-full border border-border bg-card px-1 py-1">
+          <button
+            onClick={() => shiftOffset(-1)}
+            className="rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+            aria-label="Anterior"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <span className="text-xs font-medium capitalize">{rangeLabel}</span>
+          <button
+            onClick={() => shiftOffset(1)}
+            disabled={offset >= 0}
+            className="rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:hover:bg-transparent"
+            aria-label="Seguinte"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {/* Category filter */}
       <div className="mb-5 flex gap-1 overflow-x-auto">
         <button
