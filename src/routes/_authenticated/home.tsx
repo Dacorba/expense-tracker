@@ -1,10 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { categoryEmoji, formatEUR } from "@/lib/categories";
-import { Sparkles, Plus, LogOut } from "lucide-react";
+import { Sparkles, Plus, LogOut, List, PieChart as PieIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+const PIE_COLORS = ["#c9a84c", "#4f46e5", "#2dd4a8", "#ff6b6b", "#f7931e", "#a78bfa", "#5cbdb9", "#e84393"];
 
 export const Route = createFileRoute("/_authenticated/home")({
   component: HomePage,
