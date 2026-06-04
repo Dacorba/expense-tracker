@@ -71,6 +71,12 @@ function HomePage() {
           <span className="opacity-80">Hoje</span>
           <span className="font-medium tabular-nums">{formatEUR(todayTotal)}</span>
         </div>
+        <Link
+          to="/add"
+          className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary-foreground text-sm font-semibold text-primary transition-transform active:scale-[0.98]"
+        >
+          <Plus className="h-5 w-5" /> Adicionar despesa
+        </Link>
       </section>
 
       <section className="mt-6">
